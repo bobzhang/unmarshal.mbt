@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/unmarshal"
+
+// Values
+fn fib(Int) -> Int64
+
+// Errors
+
+// Types and methods
+type DecoderState
+fn DecoderState::decode_header(Self) -> MarshalHeader raise
+
+pub struct MBytes(Bytes)
+fn MBytes::inner(Self) -> Bytes
+impl Eq for MBytes
+impl Show for MBytes
+impl ToJson for MBytes
+
+pub struct MarshalHeader {
+  magic : UInt
+  data_len : Int
+  num_objects : Int
+  size_32 : Int
+  size_64 : Int
+}
+impl Eq for MarshalHeader
+impl Show for MarshalHeader
+
+pub enum MarshalValue {
+  MInt(Int)
+  MString(String)
+  MFloat(Double)
+  MBlock(tag~ : Int, Array[MarshalValue])
+  MCustom(String, MBytes)
+  MShared(Int)
+}
+impl Eq for MarshalValue
+impl Show for MarshalValue
+impl ToJson for MarshalValue
+
+// Type aliases
+
+// Traits
+
