@@ -26,7 +26,7 @@ const Tag_shared : Byte = 0x04
 const Tag_block : Byte = 0x10
 
 ///|
-struct DecoderState {
+pub(all) struct DecoderState {
   objects : Array[MarshalValue] // Shared object table - mutated via methods
   mut position : Int // Current parsing position
   data : Bytes
@@ -146,3 +146,23 @@ pub fn DecoderState::decode_header(data : Self) -> MarshalHeader raise {
     _ => fail("Failed to parse marshal header")
   }
 }
+
+pub fn DecoderState::decode(self:Self)-> (MarshalHeader,MarshalValue) raise {
+  let header = self.decode_header()
+  let value = self.decode_value()
+  (header, value)
+}
+
+pub fn DecoderState::decode_value(self:Self)-> MarshalValue raise {
+  let tag = self.view()
+  match tag {
+    [Tag_int, ..rest] => {
+      match rest {
+        [u32be(value)] => MInt(value.reinterpret_as_int())
+        _ => fail("Failed to parse marshal header")
+      }  
+    }
+    ...
+  }
+}
+

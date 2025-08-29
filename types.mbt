@@ -17,7 +17,7 @@ pub struct MarshalHeader {
   num_objects : Int
   size_32 : Int
   size_64 : Int
-} derive(Show, Eq)
+} derive(Show, Eq, ToJson)
 
 ///|
 /// Wrapper for byte arrays with JSON serialization support
