@@ -219,3 +219,15 @@ test "decode_floats" {
   let (_, value_zero) = decoder_zero.decode()
   inspect(value_zero, content="MFloat(0)")
 }
+
+
+test "decode_tuple" {
+  let decoder_1_2 = Decoder::new(tuple_1_2_data)
+  let (_, value_1_2) = decoder_1_2.decode()
+  inspect(value_1_2, content="MBlock(tag=0, [MInt(1), MInt(2)])")
+  let decoder_hello_42 = Decoder::new(tuple_hello_42_data)
+  let (_, value_hello_42) = decoder_hello_42.decode()
+  inspect(value_hello_42, content=(
+    #|MBlock(tag=0, [MString(b"\x48\x65\x6c\x6c\x6f"), MInt(42)])
+  ))
+}
