@@ -44,6 +44,7 @@ pub enum MarshalValue {
   MInt(Int)
   MString(Bytes) // OCaml string is Bytes
   MFloat(Double)
+  MDoubleArray(Array[Double]) // OCaml float array
   MBlock(tag~ : Int, Array[MarshalValue]) // tag, fields
   MCustom(String, Bytes) // identifier, data
   MShared(Int) // reference to shared object

@@ -83,6 +83,13 @@ let () =
   print_test_case "float_neg" (-2.5) "Float -2.5";
   print_test_case "float_zero" 0.0 "Float 0.0";
   
+  (* Float arrays *)
+  print_test_case "float_array_empty" [| |] "Empty float array";
+  print_test_case "float_array_single" [| 3.14 |] "Float array with one element";
+  print_test_case "float_array_small" [| 1.0; 2.5; -3.7; 0.0; 42.42 |] "Small float array (5 elements)";
+  print_test_case "float_array_medium" (Array.init 100 (fun i -> float_of_int i)) "Medium float array (100 elements)";
+  print_test_case "float_array_large" (Array.init 300 (fun i -> float_of_int (i * 2))) "Large float array (300 elements)";
+  
   (* Shared data test cases *)
   let shared_string = "shared" in
   print_test_case "shared_string_tuple" (shared_string, shared_string) "Tuple with shared string (\"shared\", \"shared\")";

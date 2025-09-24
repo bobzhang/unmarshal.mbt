@@ -24,6 +24,7 @@ This document lists the OCaml marshal formats that are not yet supported in our 
 
 ### Floats
 - ✅ Double: `CODE_DOUBLE_LITTLE` / `CODE_DOUBLE_BIG`
+- ✅ Double Arrays: All variants (8/32/64-bit counts, both endianness)
 
 ### Shared Data
 - ✅ SHARED8: `CODE_SHARED8` (8-bit reference)
@@ -33,18 +34,20 @@ This document lists the OCaml marshal formats that are not yet supported in our 
 
 ## ❌ Missing/Incomplete Support
 
-### 1. Float Arrays (Double Arrays)
-- [ ] `CODE_DOUBLE_ARRAY8_BIG` (0x0D) - Float array with 8-bit count (big-endian)
-- [ ] `CODE_DOUBLE_ARRAY8_LITTLE` (0x0E) - Float array with 8-bit count (little-endian)
-- [ ] `CODE_DOUBLE_ARRAY32_BIG` (0x0F) - Float array with 32-bit count (big-endian)
-- [ ] `CODE_DOUBLE_ARRAY32_LITTLE` (0x07) - Float array with 32-bit count (little-endian)
-- [ ] `CODE_DOUBLE_ARRAY64_BIG` (0x16) - Float array with 64-bit count (big-endian)
-- [ ] `CODE_DOUBLE_ARRAY64_LITTLE` (0x17) - Float array with 64-bit count (little-endian)
+### 1. Float Arrays (Double Arrays) ✅
+- [x] `CODE_DOUBLE_ARRAY8_BIG` (0x0D) - Float array with 8-bit count (big-endian)
+- [x] `CODE_DOUBLE_ARRAY8_LITTLE` (0x0E) - Float array with 8-bit count (little-endian)
+- [x] `CODE_DOUBLE_ARRAY32_BIG` (0x0F) - Float array with 32-bit count (big-endian)
+- [x] `CODE_DOUBLE_ARRAY32_LITTLE` (0x07) - Float array with 32-bit count (little-endian)
+- [x] `CODE_DOUBLE_ARRAY64_BIG` (0x16) - Float array with 64-bit count (big-endian)
+- [x] `CODE_DOUBLE_ARRAY64_LITTLE` (0x17) - Float array with 64-bit count (little-endian)
 
 **Implementation Notes**: 
-- Need to add `MFloatArray(Array[Double])` variant to `MarshalValue` enum
-- Constants are defined but not handled in `decode_value()`
-- Must handle both endianness variants
+- ✅ Added `MDoubleArray(Array[Double])` variant to `MarshalValue` enum
+- ✅ All constants are now handled in `decode_value()`
+- ✅ Both endianness variants are properly supported
+- ✅ Empty float arrays are encoded as empty blocks with tag 0
+- ✅ Comprehensive tests added and passing
 
 ### 2. Custom Blocks
 - [ ] `CODE_CUSTOM_LEN` (0x18) - Custom block with length prefix

@@ -415,6 +415,49 @@ pub fn Decoder::decode_value(self : Self) -> MarshalValue raise {
       self.decode_double()
     }
 
+    // Double Arrays with 8-bit count
+    [CODE_DOUBLE_ARRAY8_LITTLE | CODE_DOUBLE_ARRAY8_BIG as code, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [count_byte, .. rest2] => {
+          let count = count_byte.to_int()
+          self.update_view(rest2)
+          self.decode_double_array(count, code == CODE_DOUBLE_ARRAY8_BIG)
+        }
+        _ => fail("Failed to read double array count")
+      }
+    }
+
+    // Double Arrays with 32-bit count
+    [CODE_DOUBLE_ARRAY32_LITTLE | CODE_DOUBLE_ARRAY32_BIG as code, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u32(count), .. rest2] => {
+          self.update_view(rest2)
+          self.decode_double_array(
+            count.reinterpret_as_int(),
+            code == CODE_DOUBLE_ARRAY32_BIG,
+          )
+        }
+        _ => fail("Failed to read double array count")
+      }
+    }
+
+    // Double Arrays with 64-bit count
+    [CODE_DOUBLE_ARRAY64_LITTLE | CODE_DOUBLE_ARRAY64_BIG as code, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u64(count), .. rest2] => {
+          self.update_view(rest2)
+          self.decode_double_array(
+            count.reinterpret_as_int64().to_int(),
+            code == CODE_DOUBLE_ARRAY64_BIG,
+          )
+        }
+        _ => fail("Failed to read double array count")
+      }
+    }
+
     // Shared references
     [CODE_SHARED8, .. rest] => {
       self.update_view(rest)
@@ -505,6 +548,43 @@ fn Decoder::decode_double(self : Self) -> MarshalValue raise {
     }
     _ => fail("Failed to parse double")
   }
+}
+
+///|
+fn Decoder::decode_double_array(
+  self : Self,
+  count : Int,
+  is_big_endian : Bool,
+) -> MarshalValue raise {
+  let doubles = Array::new()
+
+  // Read all doubles
+  for i = 0; i < count; i = i + 1 {
+    let view = self.view()
+    guard view.length() >= 8 else {
+      fail("Insufficient data for double at index \{i} in array")
+    }
+
+    // Read 8 bytes for the double
+    let mut value : UInt64 = 0UL
+    if is_big_endian {
+      // Big-endian: most significant byte first
+      for j = 0; j < 8; j = j + 1 {
+        value = (value << 8) | view[j].to_uint64()
+      }
+    } else {
+      // Little-endian: least significant byte first
+      for j = 0; j < 8; j = j + 1 {
+        value = value | (view[j].to_uint64() << (j * 8))
+      }
+    }
+    self.update_view(view[8:])
+    let double_val = value.reinterpret_as_double()
+    doubles.push(double_val)
+  }
+  let marshal_value = MDoubleArray(doubles)
+  self.add_shared_object(marshal_value)
+  marshal_value
 }
 
 ///|

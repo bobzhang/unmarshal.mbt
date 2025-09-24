@@ -33,6 +33,7 @@ pub enum MarshalValue {
   MInt(Int)
   MString(Bytes)
   MFloat(Double)
+  MDoubleArray(Array[Double])
   MBlock(tag~ : Int, Array[MarshalValue])
   MCustom(String, Bytes)
   MShared(Int)
