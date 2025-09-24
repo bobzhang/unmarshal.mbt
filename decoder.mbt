@@ -269,13 +269,6 @@ pub fn Decoder::decode_value(self : Self) -> MarshalValue raise {
       marshal_value
     }
 
-    // Small strings (length < 32): PREFIX_SMALL_STRING + length
-    [0x20..=0x3F as b, .. rest] => {
-      self.update_view(rest)
-      let len = b.to_int() - PREFIX_SMALL_STRING.to_int()
-      self.decode_string_with_length(len)
-    }
-
     // Small blocks (tag < 16, size < 8): PREFIX_SMALL_BLOCK + tag + (size << 4)
     [0x80..=0xFF as b, .. rest] => {
       self.update_view(rest)
@@ -340,6 +333,13 @@ pub fn Decoder::decode_value(self : Self) -> MarshalValue raise {
         }
         _ => fail("Failed to read INT64 value")
       }
+    }
+
+    // Small strings (length < 32): PREFIX_SMALL_STRING + length
+    [0x20..=0x3F as b, .. rest] => {
+      self.update_view(rest)
+      let len = b.to_int() - PREFIX_SMALL_STRING.to_int()
+      self.decode_string_with_length(len)
     }
 
     // STRING8: String with 8-bit length
