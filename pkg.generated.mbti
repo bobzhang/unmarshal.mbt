@@ -8,14 +8,15 @@ fn fib(Int) -> Int64
 
 // Types and methods
 pub(all) struct Decoder {
-  objects : Array[MarshalValue]
+  object_table : Map[MarshalValue, Int]
+  object_array : Array[MarshalValue]
   mut position : Int
   data : Bytes
 }
 fn Decoder::decode(Self) -> (MarshalHeader, MarshalValue) raise
 fn Decoder::decode_header(Self) -> MarshalHeader raise
 fn Decoder::decode_value(Self) -> MarshalValue raise
-fn Decoder::new() -> Self
+fn Decoder::new(Bytes) -> Self
 
 pub struct MarshalHeader {
   magic : UInt
@@ -30,13 +31,14 @@ impl ToJson for MarshalHeader
 
 pub enum MarshalValue {
   MInt(Int)
-  MString(String)
+  MString(Bytes)
   MFloat(Double)
   MBlock(tag~ : Int, Array[MarshalValue])
   MCustom(String, Bytes)
   MShared(Int)
 }
 impl Eq for MarshalValue
+impl Hash for MarshalValue
 impl Show for MarshalValue
 impl ToJson for MarshalValue
 

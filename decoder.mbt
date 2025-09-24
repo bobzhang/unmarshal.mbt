@@ -1,3 +1,93 @@
+// Prefix tags for compact representations
+
+///|
+const PREFIX_SMALL_INT : Byte = 0x40
+
+///|
+const PREFIX_SMALL_STRING : Byte = 0x20
+
+///|
+const PREFIX_SMALL_BLOCK : Byte = 0x80
+
+// Code tags for various data types
+
+///|
+const CODE_INT8 : Byte = 0x00
+
+///|
+const CODE_INT16 : Byte = 0x01
+
+///|
+const CODE_INT32 : Byte = 0x02
+
+///|
+const CODE_INT64 : Byte = 0x03
+
+///|
+const CODE_SHARED8 : Byte = 0x04
+
+///|
+const CODE_SHARED16 : Byte = 0x05
+
+///|
+const CODE_SHARED32 : Byte = 0x06
+
+///|
+const CODE_SHARED64 : Byte = 0x14
+
+///|
+const CODE_BLOCK32 : Byte = 0x08
+
+///|
+const CODE_BLOCK64 : Byte = 0x13
+
+///|
+const CODE_STRING8 : Byte = 0x09
+
+///|
+const CODE_STRING32 : Byte = 0x0A
+
+///|
+const CODE_STRING64 : Byte = 0x15
+
+///|
+const CODE_DOUBLE_BIG : Byte = 0x0B
+
+///|
+const CODE_DOUBLE_LITTLE : Byte = 0x0C
+
+///|
+const CODE_DOUBLE_ARRAY8_BIG : Byte = 0x0D
+
+///|
+const CODE_DOUBLE_ARRAY8_LITTLE : Byte = 0x0E
+
+///|
+const CODE_DOUBLE_ARRAY32_BIG : Byte = 0x0F
+
+///|
+const CODE_DOUBLE_ARRAY32_LITTLE : Byte = 0x07
+
+///|
+const CODE_DOUBLE_ARRAY64_BIG : Byte = 0x16
+
+///|
+const CODE_DOUBLE_ARRAY64_LITTLE : Byte = 0x17
+
+///|
+const CODE_CODEPOINTER : Byte = 0x10
+
+///|
+const CODE_INFIXPOINTER : Byte = 0x11
+
+///|
+const CODE_CUSTOM_LEN : Byte = 0x18
+
+///|
+const CODE_CUSTOM_FIXED : Byte = 0x19
+
+// Legacy tags (kept for reference)
+
 ///|
 const Tag_int : Byte = 0x01
 
@@ -171,38 +261,225 @@ pub fn Decoder::decode(self : Self) -> (MarshalHeader, MarshalValue) raise {
 ///|
 pub fn Decoder::decode_value(self : Self) -> MarshalValue raise {
   match self.view() {
-    // Small integers (0-63): encoded as 0x40 + value
+    // Small integers (0-63): encoded as PREFIX_SMALL_INT + value
     [0x40..=0x7F as b, .. rest] => {
       self.update_view(rest)
-      let value = b.to_int() - 0x40
+      let value = b.to_int() - PREFIX_SMALL_INT.to_int()
       let marshal_value = MInt(value)
       marshal_value
     }
 
-    // String tag
-    [Tag_string, .. rest] => {
+    // Small strings (length < 32): PREFIX_SMALL_STRING + length
+    [0x20..=0x3F as b, .. rest] => {
       self.update_view(rest)
-      self.decode_string()
+      let len = b.to_int() - PREFIX_SMALL_STRING.to_int()
+      self.decode_string_with_length(len)
     }
-    // Double tag
-    [Tag_double, .. rest] => {
+
+    // Small blocks (tag < 16, size < 8): PREFIX_SMALL_BLOCK + tag + (size << 4)
+    [0x80..=0xFF as b, .. rest] => {
+      self.update_view(rest)
+      let byte_val = b.to_int() - PREFIX_SMALL_BLOCK.to_int()
+      let tag = byte_val & 0x0F // Lower 4 bits
+      let size = byte_val >> 4 // Upper 4 bits
+      self.decode_block_with_tag_size(tag, size)
+    }
+
+    // INT8: 8-bit signed integer
+    [CODE_INT8, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [b, .. rest2] => {
+          self.update_view(rest2)
+          // Convert unsigned byte to signed int8
+          let value = if b.to_int() >= 128 {
+            b.to_int() - 256
+          } else {
+            b.to_int()
+          }
+          MInt(value)
+        }
+        _ => fail("Failed to read INT8 value")
+      }
+    }
+
+    // INT16: 16-bit signed integer (big-endian)
+    [CODE_INT16, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [b1, b2, .. rest2] => {
+          self.update_view(rest2)
+          let value = (b1.to_int() << 8) | b2.to_int()
+          // Convert to signed int16
+          let signed_value = if value >= 32768 { value - 65536 } else { value }
+          MInt(signed_value)
+        }
+        _ => fail("Failed to read INT16 value")
+      }
+    }
+
+    // INT32: 32-bit signed integer (big-endian)
+    [CODE_INT32, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u32(value), .. rest2] => {
+          self.update_view(rest2)
+          MInt(value.reinterpret_as_int())
+        }
+        _ => fail("Failed to read INT32 value")
+      }
+    }
+
+    // INT64: 64-bit signed integer (big-endian)
+    [CODE_INT64, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u64(value), .. rest2] => {
+          self.update_view(rest2)
+          MInt(value.reinterpret_as_int64().to_int())
+        }
+        _ => fail("Failed to read INT64 value")
+      }
+    }
+
+    // STRING8: String with 8-bit length
+    [CODE_STRING8, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [len_byte, .. rest2] => {
+          self.update_view(rest2)
+          self.decode_string_with_length(len_byte.to_int())
+        }
+        _ => fail("Failed to read STRING8 length")
+      }
+    }
+
+    // STRING32: String with 32-bit length
+    [CODE_STRING32, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u32(length), .. rest2] => {
+          self.update_view(rest2)
+          self.decode_string_with_length(length.reinterpret_as_int())
+        }
+        _ => fail("Failed to read STRING32 length")
+      }
+    }
+
+    // STRING64: String with 64-bit length (64-bit platforms only)
+    [CODE_STRING64, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u64(length), .. rest2] => {
+          self.update_view(rest2)
+          self.decode_string_with_length(length.reinterpret_as_int64().to_int())
+        }
+        _ => fail("Failed to read STRING64 length")
+      }
+    }
+
+    // BLOCK32: Block with 32-bit header
+    [CODE_BLOCK32, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u32(header), .. rest2] => {
+          self.update_view(rest2)
+          // OCaml header format: size in high bits, tag in low 8 bits
+          let hdr = header.reinterpret_as_int()
+          let tag = hdr & 0xFF
+          let size = hdr >> 10 // Size is stored starting at bit 10
+          self.decode_block_with_tag_size(tag, size)
+        }
+        _ => fail("Failed to read BLOCK32 header")
+      }
+    }
+
+    // BLOCK64: Block with 64-bit header (64-bit platforms only)
+    [CODE_BLOCK64, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u64(header), .. rest2] => {
+          self.update_view(rest2)
+          let hdr = header.reinterpret_as_int64().to_int()
+          let tag = hdr & 0xFF
+          let size = hdr >> 10
+          self.decode_block_with_tag_size(tag, size)
+        }
+        _ => fail("Failed to read BLOCK64 header")
+      }
+    }
+
+    // Double/Float
+    [CODE_DOUBLE_LITTLE | CODE_DOUBLE_BIG, .. rest] => {
       self.update_view(rest)
       self.decode_double()
     }
-    // Block tag
-    [Tag_block, .. rest] => {
+
+    // Shared references
+    [CODE_SHARED8, .. rest] => {
       self.update_view(rest)
-      self.decode_block()
+      match self.view() {
+        [idx_byte, .. rest2] => {
+          self.update_view(rest2)
+          get_shared_object(self, idx_byte.to_int())
+        }
+        _ => fail("Failed to read SHARED8 index")
+      }
     }
-    // Shared object reference
-    [Tag_shared, .. rest] => {
+    [CODE_SHARED16, .. rest] => {
       self.update_view(rest)
-      self.decode_shared_reference()
+      match self.view() {
+        [b1, b2, .. rest2] => {
+          self.update_view(rest2)
+          let index = (b1.to_int() << 8) | b2.to_int()
+          get_shared_object(self, index)
+        }
+        _ => fail("Failed to read SHARED16 index")
+      }
+    }
+    [CODE_SHARED32, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u32(index), .. rest2] => {
+          self.update_view(rest2)
+          get_shared_object(self, index.reinterpret_as_int())
+        }
+        _ => fail("Failed to read SHARED32 index")
+      }
+    }
+    [CODE_SHARED64, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u64(index), .. rest2] => {
+          self.update_view(rest2)
+          get_shared_object(self, index.reinterpret_as_int64().to_int())
+        }
+        _ => fail("Failed to read SHARED64 index")
+      }
     }
     [tag, ..] =>
-      fail("Unknown or unsupported marshal tag \{tag} at \{self.position}")
-    [] => fail("unepected end of data")
+      fail(
+        "Unknown or unsupported marshal tag \{tag} at position \{self.position}",
+      )
+    [] => fail("Unexpected end of data")
   }
+}
+
+///|
+fn Decoder::decode_string_with_length(
+  self : Self,
+  len : Int,
+) -> MarshalValue raise {
+  let view = self.view()
+  guard view.length() >= len else {
+    fail("Insufficient data for string of length \{len}")
+  }
+  let string_bytes = view[:len]
+  let remaining = view[len:]
+  self.update_view(remaining)
+  let marshal_value = MString(string_bytes.to_bytes())
+  self.add_shared_object(marshal_value)
+  marshal_value
 }
 
 ///|
@@ -210,15 +487,8 @@ fn Decoder::decode_string(self : Self) -> MarshalValue raise {
   match self.view() {
     [u32(length), .. rest] => {
       let len = length.reinterpret_as_int()
-      guard rest.length() >= len else {
-        fail("Insufficient data for string of length ")
-      }
-      let string_bytes = rest[:len]
-      let remaining = rest[len:]
-      self.update_view(remaining)
-      let marshal_value = MString(string_bytes.to_bytes())
-      self.add_shared_object(marshal_value)
-      marshal_value
+      self.update_view(rest)
+      self.decode_string_with_length(len)
     }
     _ => fail("Failed to parse string length")
   }
@@ -238,24 +508,32 @@ fn Decoder::decode_double(self : Self) -> MarshalValue raise {
 }
 
 ///|
+fn Decoder::decode_block_with_tag_size(
+  self : Self,
+  tag : Int,
+  size : Int,
+) -> MarshalValue raise {
+  // Create placeholder for recursive structures
+  let fields = Array::new()
+  let marshal_value = MBlock(tag~, fields)
+  self.add_shared_object(marshal_value)
+
+  // Decode all fields
+  for i = 0; i < size; i = i + 1 {
+    let field_value = self.decode_value()
+    fields.push(field_value)
+  }
+  marshal_value
+}
+
+///|
 fn Decoder::decode_block(self : Self) -> MarshalValue raise {
   match self.view() {
     [tag_byte, size_byte, .. rest] => {
       let tag = tag_byte.to_int()
       let size = size_byte.to_int()
       self.update_view(rest)
-
-      // Create placeholder for recursive structures
-      let fields = Array::new()
-      let marshal_value = MBlock(tag~, fields)
-      let obj_index = self.add_shared_object(marshal_value)
-
-      // Decode all fields
-      for i = 0; i < size; i = i + 1 {
-        let field_value = self.decode_value()
-        fields.push(field_value)
-      }
-      marshal_value
+      self.decode_block_with_tag_size(tag, size)
     }
     _ => fail("Failed to parse block header")
   }
