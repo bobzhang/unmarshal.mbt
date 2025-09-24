@@ -83,12 +83,10 @@ const CODE_DOUBLE_ARRAY64_LITTLE : Byte = 0x17
 // const CODE_INFIXPOINTER : Byte = 0x11
 
 ///|
-// Custom blocks - not yet implemented
-// const CODE_CUSTOM_LEN : Byte = 0x18
+const CODE_CUSTOM_LEN : Byte = 0x18
 
 ///|
-// Custom blocks with fixed length - not yet implemented
-// const CODE_CUSTOM_FIXED : Byte = 0x19
+const CODE_CUSTOM_FIXED : Byte = 0x19
 
 // Legacy tags (kept for reference)
 
@@ -513,6 +511,27 @@ pub fn Decoder::decode_value(self : Self) -> MarshalValue raise {
         _ => fail("Failed to read SHARED64 index")
       }
     }
+
+    // Custom blocks with length prefix
+    [CODE_CUSTOM_LEN, .. rest] => {
+      self.update_view(rest)
+      match self.view() {
+        [u32(length), .. rest2] => {
+          self.update_view(rest2)
+          let len = length.reinterpret_as_int()
+          self.decode_custom_block_with_length(len)
+        }
+        _ => fail("Failed to read custom block length")
+      }
+    }
+
+    // Custom blocks with fixed size (not commonly used, but we support it)
+    [CODE_CUSTOM_FIXED, .. rest] => {
+      self.update_view(rest)
+      // Fixed custom blocks don't have a length prefix - the deserializer knows the size
+      // We'll treat this similar to CODE_CUSTOM_LEN but without reading a length
+      self.decode_custom_block_fixed()
+    }
     [tag, ..] =>
       fail(
         "Unknown or unsupported marshal tag \{tag} at position \{self.position}",
@@ -646,3 +665,83 @@ fn Decoder::decode_block_with_tag_size(
 //     _ => fail("Failed to parse shared reference index")
 //   }
 // }
+
+///|
+fn Decoder::decode_custom_block_with_length(
+  self : Self,
+  total_length : Int,
+) -> MarshalValue raise {
+  // Read the identifier string (null-terminated)
+  let identifier_bytes = self.read_null_terminated_string()
+  let identifier = String::from_array(
+    identifier_bytes.to_array().map(fn(b) { b.to_char() }),
+  )
+
+  // Calculate remaining data length after identifier
+  let data_length = total_length - identifier_bytes.length() - 1 // -1 for null terminator
+
+  // Read the custom data
+  let view = self.view()
+  guard view.length() >= data_length else {
+    fail("Insufficient data for custom block payload of length \{data_length}")
+  }
+  let data_bytes = view[:data_length].to_bytes()
+  self.update_view(view[data_length:])
+  let marshal_value = MCustom(identifier, data_bytes)
+  self.add_shared_object(marshal_value)
+  marshal_value
+}
+
+///|
+fn Decoder::decode_custom_block_fixed(self : Self) -> MarshalValue raise {
+  // For fixed custom blocks, we don't have a length prefix
+  // Read the identifier string first
+  let identifier_bytes = self.read_null_terminated_string()
+  let identifier = String::from_array(
+    identifier_bytes.to_array().map(fn(b) { b.to_char() }),
+  )
+
+  // The size depends on the identifier - common cases:
+  // "_i" -> Int32 -> 4 bytes
+  // "_j" -> Int64 -> 8 bytes
+  // "_n" -> Nativeint -> 4 or 8 bytes depending on platform
+  let data_length = match identifier {
+    "_i" => 4 // Int32
+    "_j" => 8 // Int64
+    "_n" => 8 // Assume 64-bit platform for nativeint
+    "_m" => 8 // Custom int (often int64)
+    _ => fail("Unknown custom block identifier: \{identifier}")
+  }
+
+  // Read the custom data
+  let view = self.view()
+  guard view.length() >= data_length else {
+    fail("Insufficient data for custom block '\{identifier}' payload")
+  }
+  let data_bytes = view[:data_length].to_bytes()
+  self.update_view(view[data_length:])
+  let marshal_value = MCustom(identifier, data_bytes)
+  self.add_shared_object(marshal_value)
+  marshal_value
+}
+
+///|
+fn Decoder::read_null_terminated_string(self : Self) -> Bytes raise {
+  let view = self.view()
+  let mut len = 0
+
+  // Find null terminator
+  while len < view.length() && view[len] != b'\x00' {
+    len = len + 1
+  }
+  guard len < view.length() else {
+    fail("No null terminator found in custom block identifier")
+  }
+
+  // Extract the string bytes (without null terminator)
+  let str_bytes = view[:len].to_bytes()
+
+  // Update position past the string and null terminator
+  self.update_view(view[len + 1:])
+  str_bytes
+}

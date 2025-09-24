@@ -49,15 +49,16 @@ This document lists the OCaml marshal formats that are not yet supported in our 
 - ✅ Empty float arrays are encoded as empty blocks with tag 0
 - ✅ Comprehensive tests added and passing
 
-### 2. Custom Blocks
-- [ ] `CODE_CUSTOM_LEN` (0x18) - Custom block with length prefix
-- [ ] `CODE_CUSTOM_FIXED` (0x19) - Custom block with fixed size
+### 2. Custom Blocks ✅
+- [x] `CODE_CUSTOM_LEN` (0x18) - Custom block with length prefix
+- [x] `CODE_CUSTOM_FIXED` (0x19) - Custom block with fixed size
 
 **Implementation Notes**:
-- `MCustom` variant exists but is never constructed
-- Need to parse identifier string (null-terminated)
-- Custom data serialization format varies by custom operations
-- Common custom types: Int32, Int64, Nativeint, Bigarray
+- ✅ `MCustom(String, Bytes)` variant fully implemented
+- ✅ Parses identifier string (null-terminated)
+- ✅ Supports common custom types: Int32 ("_i"), Int64 ("_j"), Nativeint ("_n")
+- ✅ Custom data stored as raw bytes for application-specific interpretation
+- ✅ Comprehensive tests added and passing
 
 ### 3. Code Pointers (Functions/Closures)
 - [ ] `CODE_CODEPOINTER` (0x10) - Code pointer representation
