@@ -36,16 +36,16 @@ moon add bobzhang/unmarshal
 ### Basic Example
 
 ```mbt
+///|
 test "basic_usage" {
   let data : Bytes = [
-    b'\x84', b'\x95', b'\xa6', b'\xbe',  // Magic number
-    b'\x00', b'\x00', b'\x00', b'\x01',  // Data length: 1
-    b'\x00', b'\x00', b'\x00', b'\x00',  // Num objects: 0
-    b'\x00', b'\x00', b'\x00', b'\x00',  // Size 32: 0
-    b'\x00', b'\x00', b'\x00', b'\x00',  // Size 64: 0
-    b'\x41'                               // Data: small int 1
+    b'\x84', b'\x95', b'\xa6', b'\xbe', // Magic number
+     b'\x00', b'\x00', b'\x00', b'\x01', // Data length: 1
+     b'\x00', b'\x00', b'\x00', b'\x00', // Num objects: 0
+     b'\x00', b'\x00', b'\x00', b'\x00', // Size 32: 0
+     b'\x00', b'\x00', b'\x00', b'\x00', // Size 64: 0
+     b'\x41', // Data: small int 1
   ]
-
   let decoder = @unmarshal.Decoder::new(data)
   let (header, value) = decoder.decode()
 
@@ -60,14 +60,14 @@ test "basic_usage" {
 #### Integers
 
 ```mbt
+///|
 test "decode_integers" {
   // Small integer (0-63): single byte encoding
   let small_int_data : Bytes = [
-    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x01',
-    b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
-    b'\x00', b'\x00', b'\x00', b'\x00', b'\x6a'  // 0x40 + 42 = 0x6a
+    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x01', b'\x00',
+    b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
+    b'\x00', b'\x00', b'\x6a', // 0x40 + 42 = 0x6a
   ]
-
   let decoder = @unmarshal.Decoder::new(small_int_data)
   let (_, value) = decoder.decode()
   inspect(value, content="MInt(42)")
@@ -77,41 +77,41 @@ test "decode_integers" {
 #### Strings
 
 ```mbt
+///|
 test "decode_strings" {
   // Small string "Hello" (< 32 chars)
   let string_data : Bytes = [
-    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x06',
-    b'\x00', b'\x00', b'\x00', b'\x01', b'\x00', b'\x00', b'\x00', b'\x03',
-    b'\x00', b'\x00', b'\x00', b'\x02', 
-    b'\x25',                              // PREFIX_SMALL_STRING + 5
-    b'\x48', b'\x65', b'\x6c', b'\x6c', b'\x6f'  // "Hello"
+    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x06', b'\x00',
+    b'\x00', b'\x00', b'\x01', b'\x00', b'\x00', b'\x00', b'\x03', b'\x00', b'\x00',
+    b'\x00', b'\x02', b'\x25', // PREFIX_SMALL_STRING + 5
+     b'\x48', b'\x65', b'\x6c', b'\x6c', b'\x6f', // "Hello"
   ]
-
   let decoder = @unmarshal.Decoder::new(string_data)
   let (_, value) = decoder.decode()
-  inspect(value, content=(
-    #|MString(b"\x48\x65\x6c\x6c\x6f")
-  ))
+  inspect(
+    value,
+    content=(
+      #|MString(b"\x48\x65\x6c\x6c\x6f")
+    ),
+  )
 }
 ```
 
 #### Tuples and Blocks
 
 ```mbt
+///|
 test "decode_tuple" {
   // Tuple (1, 2)
   let tuple_data : Bytes = [
-    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x03',
-    b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
-    b'\x00', b'\x00', b'\x00', b'\x00',
-    b'\xa0',  // PREFIX_SMALL_BLOCK: tag=0, size=2
-    b'\x41',  // Small int 1
-    b'\x42'   // Small int 2
+    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x03', b'\x00',
+    b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
+    b'\x00', b'\x00', b'\xa0', // PREFIX_SMALL_BLOCK: tag=0, size=2
+     b'\x41', // Small int 1
+     b'\x42', // Small int 2
   ]
-
   let decoder = @unmarshal.Decoder::new(tuple_data)
   let (_, value) = decoder.decode()
-
   match value {
     @unmarshal.MBlock(tag~, fields) => {
       inspect(tag, content="0")
@@ -127,22 +127,20 @@ test "decode_tuple" {
 #### Float Arrays
 
 ```mbt
+///|
 test "decode_float_array" {
   // Simple float array [3.14, 2.71]
   let float_array_data : Bytes = [
-    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x12',
-    b'\x00', b'\x00', b'\x00', b'\x01', b'\x00', b'\x00', b'\x00', b'\x05',
-    b'\x00', b'\x00', b'\x00', b'\x03',
-    b'\x0e', b'\x02',  // CODE_DOUBLE_ARRAY8_LITTLE, count=2
+    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x12', b'\x00',
+    b'\x00', b'\x00', b'\x01', b'\x00', b'\x00', b'\x00', b'\x05', b'\x00', b'\x00',
+    b'\x00', b'\x03', b'\x0e', b'\x02', // CODE_DOUBLE_ARRAY8_LITTLE, count=2
     // First double: 3.14 (little-endian)
-    b'\x1f', b'\x85', b'\xeb', b'\x51', b'\xb8', b'\x1e', b'\x09', b'\x40',
+     b'\x1f', b'\x85', b'\xeb', b'\x51', b'\xb8', b'\x1e', b'\x09', b'\x40',
     // Second double: 2.71 (little-endian)
-    b'\x29', b'\x5c', b'\x8f', b'\xc2', b'\xf5', b'\xa8', b'\x05', b'\x40'
+     b'\x29', b'\x5c', b'\x8f', b'\xc2', b'\xf5', b'\xa8', b'\x05', b'\x40',
   ]
-
   let decoder = @unmarshal.Decoder::new(float_array_data)
   let (_, value) = decoder.decode()
-
   match value {
     @unmarshal.MDoubleArray(arr) => {
       inspect(arr.length(), content="2")
@@ -160,31 +158,35 @@ test "decode_float_array" {
 OCaml's Marshal format supports object sharing to avoid duplicating data and handle cyclic structures:
 
 ```mbt
+///|
 test "shared_references" {
   // Tuple with shared string: ("shared", "shared")
   // The second string is a reference to the first
   let shared_data : Bytes = [
-    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0a',
-    b'\x00', b'\x00', b'\x00', b'\x02', b'\x00', b'\x00', b'\x00', b'\x06',
-    b'\x00', b'\x00', b'\x00', b'\x05',
-    b'\xa0',                              // Small block, tag=0, size=2
-    b'\x26', b'\x73', b'\x68', b'\x61',   // Small string "shar"
-    b'\x72', b'\x65', b'\x64',            // "ed"
-    b'\x04', b'\x01'                      // SHARED8, index 1
+    b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0a', b'\x00',
+    b'\x00', b'\x00', b'\x02', b'\x00', b'\x00', b'\x00', b'\x06', b'\x00', b'\x00',
+    b'\x00', b'\x05', b'\xa0', // Small block, tag=0, size=2
+     b'\x26', b'\x73', b'\x68', b'\x61', // Small string "shar"
+     b'\x72', b'\x65', b'\x64', // "ed"
+     b'\x04', b'\x01', // SHARED8, index 1
   ]
-
   let decoder = @unmarshal.Decoder::new(shared_data)
   let (_, value) = decoder.decode()
-
   match value {
     @unmarshal.MBlock(tag~, fields) => {
       inspect(tag, content="0")
-      inspect(fields[0], content=(
-        #|MString(b"\x73\x68\x61\x72\x65\x64")
-      ))
-      inspect(fields[1], content=(
-        #|MString(b"\x73\x68\x61\x72\x65\x64")
-      ))  // Reference to first field
+      inspect(
+        fields[0],
+        content=(
+          #|MString(b"\x73\x68\x61\x72\x65\x64")
+        ),
+      )
+      inspect(
+        fields[1],
+        content=(
+          #|MString(b"\x73\x68\x61\x72\x65\x64")
+        ),
+      ) // Reference to first field
     }
     _ => abort("Expected MBlock")
   }

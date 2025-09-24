@@ -234,3 +234,23 @@ test "decode_tuple" {
     ),
   )
 }
+
+///|
+test "decode_empty_list" {
+  let decoder = Decoder::new(empty_list_data)
+  let (_, value) = decoder.decode()
+  // Empty list is represented as MInt(0) in OCaml
+  inspect(value, content="MInt(0)")
+}
+
+///|
+test "decode_list_1_2" {
+  let decoder = Decoder::new(list_1_2_data)
+  let (_, value) = decoder.decode()
+  // List [1; 2] is encoded as a series of cons cells
+  // [1; 2] = 1 :: 2 :: []
+  inspect(
+    value,
+    content="MBlock(tag=0, [MInt(1), MBlock(tag=0, [MInt(2), MInt(0)])])",
+  )
+}

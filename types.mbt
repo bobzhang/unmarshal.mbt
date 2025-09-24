@@ -46,6 +46,6 @@ pub enum MarshalValue {
   MFloat(Double)
   MDoubleArray(Array[Double]) // OCaml float array
   MBlock(tag~ : Int, Array[MarshalValue]) // tag, fields
-  MCustom(String, Bytes) // identifier, data
-  MShared(Int) // reference to shared object
+  MCustom(String, Bytes) // Custom blocks (not yet implemented)
+  MShared(Int) // Shared reference (currently resolved immediately during decoding)
 } derive(Show, Eq, ToJson, Hash)

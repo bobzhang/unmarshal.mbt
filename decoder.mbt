@@ -75,45 +75,58 @@ const CODE_DOUBLE_ARRAY64_BIG : Byte = 0x16
 const CODE_DOUBLE_ARRAY64_LITTLE : Byte = 0x17
 
 ///|
-const CODE_CODEPOINTER : Byte = 0x10
+// Code pointers - not yet implemented
+// const CODE_CODEPOINTER : Byte = 0x10
 
 ///|
-const CODE_INFIXPOINTER : Byte = 0x11
+// Infix pointers - not yet implemented
+// const CODE_INFIXPOINTER : Byte = 0x11
 
 ///|
-const CODE_CUSTOM_LEN : Byte = 0x18
+// Custom blocks - not yet implemented
+// const CODE_CUSTOM_LEN : Byte = 0x18
 
 ///|
-const CODE_CUSTOM_FIXED : Byte = 0x19
+// Custom blocks with fixed length - not yet implemented
+// const CODE_CUSTOM_FIXED : Byte = 0x19
 
 // Legacy tags (kept for reference)
 
 ///|
-const Tag_int : Byte = 0x01
+// OCaml internal tag for integers
+// const Tag_int : Byte = 0x01
 
 ///|
-const Tag_pointer : Byte = 0x02
+// OCaml internal tag for pointers
+// const Tag_pointer : Byte = 0x02
 
 ///|
-const Tag_string : Byte = 0x09
+// OCaml internal tag for strings
+// const Tag_string : Byte = 0x09
 
 ///|
-const Tag_double : Byte = 0x0C
+// OCaml internal tag for doubles
+// const Tag_double : Byte = 0x0C
 
 ///|
-const Tag_double_array : Byte = 0x0D
+// OCaml internal tag for double arrays
+// const Tag_double_array : Byte = 0x0D
 
 ///|
-const Tag_custom : Byte = 0x12
+// OCaml internal tag for custom blocks
+// const Tag_custom : Byte = 0x12
 
 ///|
-const Tag_int64 : Byte = 0x13
+// OCaml internal tag for int64 values
+// const Tag_int64 : Byte = 0x13
 
 ///|
-const Tag_shared : Byte = 0x04
+// OCaml internal tag for shared values
+// const Tag_shared : Byte = 0x04
 
 ///|
-const Tag_block : Byte = 0x10
+// OCaml internal tag for blocks
+// const Tag_block : Byte = 0x10
 
 ///|
 pub(all) struct Decoder {
@@ -526,16 +539,17 @@ fn Decoder::decode_string_with_length(
 }
 
 ///|
-fn Decoder::decode_string(self : Self) -> MarshalValue raise {
-  match self.view() {
-    [u32(length), .. rest] => {
-      let len = length.reinterpret_as_int()
-      self.update_view(rest)
-      self.decode_string_with_length(len)
-    }
-    _ => fail("Failed to parse string length")
-  }
-}
+// Helper function for decoding strings - currently unused
+// fn Decoder::decode_string(self : Self) -> MarshalValue raise {
+//   match self.view() {
+//     [u32(length), .. rest] => {
+//       let len = length.reinterpret_as_int()
+//       self.update_view(rest)
+//       self.decode_string_with_length(len)
+//     }
+//     _ => fail("Failed to parse string length")
+//   }
+// }
 
 ///|
 fn Decoder::decode_double(self : Self) -> MarshalValue raise {
@@ -607,26 +621,28 @@ fn Decoder::decode_block_with_tag_size(
 }
 
 ///|
-fn Decoder::decode_block(self : Self) -> MarshalValue raise {
-  match self.view() {
-    [tag_byte, size_byte, .. rest] => {
-      let tag = tag_byte.to_int()
-      let size = size_byte.to_int()
-      self.update_view(rest)
-      self.decode_block_with_tag_size(tag, size)
-    }
-    _ => fail("Failed to parse block header")
-  }
-}
+// Helper function for decoding blocks - currently unused
+// fn Decoder::decode_block(self : Self) -> MarshalValue raise {
+//   match self.view() {
+//     [tag_byte, size_byte, .. rest] => {
+//       let tag = tag_byte.to_int()
+//       let size = size_byte.to_int()
+//       self.update_view(rest)
+//       self.decode_block_with_tag_size(tag, size)
+//     }
+//     _ => fail("Failed to parse block header")
+//   }
+// }
 
 ///|
-fn Decoder::decode_shared_reference(self : Self) -> MarshalValue raise {
-  match self.view() {
-    [u32(index), .. rest] => {
-      self.update_view(rest)
-      let idx = index.reinterpret_as_int()
-      get_shared_object(self, idx)
-    }
-    _ => fail("Failed to parse shared reference index")
-  }
-}
+// Helper function for decoding shared references - currently unused
+// fn Decoder::decode_shared_reference(self : Self) -> MarshalValue raise {
+//   match self.view() {
+//     [u32(index), .. rest] => {
+//       self.update_view(rest)
+//       let idx = index.reinterpret_as_int()
+//       get_shared_object(self, idx)
+//     }
+//     _ => fail("Failed to parse shared reference index")
+//   }
+// }

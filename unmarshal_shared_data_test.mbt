@@ -58,39 +58,40 @@ test "decode_list_with_shared_elements" {
   // The sharing could be at the string level or at the list node level
   let decoder = Decoder::new(list_with_shared_data)
   let (_, value) = decoder.decode()
-  
+
   // Helper function to extract list elements
   fn extract_list_elements(v : MarshalValue) -> Array[String] {
     let result = Array::new()
     fn go(node : MarshalValue) -> Unit {
       match node {
-        MBlock(tag~, fields) => {
+        MBlock(tag~, fields) =>
           if tag == 0 && fields.length() == 2 {
             // List node: first is element, second is tail
             match fields[0] {
               MString(s) => {
                 // Convert bytes to string - s is Bytes
-                let str = String::from_array(s.to_array().map(fn(b) { b.to_char() }))
+                let str = String::from_array(
+                  s.to_array().map(fn(b) { b.to_char() }),
+                )
                 result.push(str)
               }
-              MBlock(tag~, _) => {
+              MBlock(tag=_, _) =>
                 // Could be a shared list node creating a cycle
                 // For now, just stop traversal to avoid infinite loop
                 return
-              }
               _ => ()
             }
             go(fields[1])
           }
-        }
         MInt(0) => () // End of list
         _ => ()
       }
     }
+
     go(v)
     result
   }
-  
+
   let elements = extract_list_elements(value)
   // We should have at least one "elem" in the list
   assert_true(elements.length() >= 1)
@@ -121,12 +122,14 @@ test "verify_shared_indices" {
   // The second occurrence is decoded from a shared reference but appears as the same string value
   let decoder1 = Decoder::new(shared_string_tuple_data)
   let (_, value1) = decoder1.decode()
-  
+
   // Verify the structure - both strings have the same value
-  inspect(value1, content=(
-    #|MBlock(tag=0, [MString(b"\x73\x68\x61\x72\x65\x64"), MString(b"\x73\x68\x61\x72\x65\x64")])
-  ))
-  
+  inspect(
+    value1,
+    content=(
+      #|MBlock(tag=0, [MString(b"\x73\x68\x61\x72\x65\x64"), MString(b"\x73\x68\x61\x72\x65\x64")])
+    ),
+  )
   match value1 {
     MBlock(tag~, fields) => {
       assert_eq(tag, 0)
@@ -139,7 +142,10 @@ test "verify_shared_indices" {
       // Second field should be the same string "shared" (resolved from shared reference)
       match fields[1] {
         MString(s) => assert_eq(s, b"shared") // Should be the same string value
-        _ => abort("Expected MString for second field (resolved from shared reference)")
+        _ =>
+          abort(
+            "Expected MString for second field (resolved from shared reference)",
+          )
       }
     }
     _ => abort("Expected MBlock")
@@ -148,7 +154,7 @@ test "verify_shared_indices" {
   // Complex case: verify shared list indices
   let decoder2 = Decoder::new(shared_list_tuple_data)
   let (_, value2) = decoder2.decode()
-  
+
   // Just verify it's a tuple with two elements that are both lists
   match value2 {
     MBlock(tag~, fields) => {
