@@ -19,7 +19,6 @@ pub struct MarshalHeader {
   size_64 : Int
 } derive(Show, Eq, ToJson)
 
-
 /// Represents all possible OCaml values that can be unmarshaled
 /// 
 /// This enum covers the complete range of OCaml data types that can be
@@ -43,9 +42,9 @@ pub struct MarshalHeader {
 ///|
 pub enum MarshalValue {
   MInt(Int)
-  MString(String)
+  MString(Bytes) // OCaml string is Bytes
   MFloat(Double)
   MBlock(tag~ : Int, Array[MarshalValue]) // tag, fields
   MCustom(String, Bytes) // identifier, data
   MShared(Int) // reference to shared object
-} derive(Show, Eq, ToJson)
+} derive(Show, Eq, ToJson, Hash)

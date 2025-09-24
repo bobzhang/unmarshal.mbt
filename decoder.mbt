@@ -27,22 +27,20 @@ const Tag_block : Byte = 0x10
 
 ///|
 pub(all) struct Decoder {
-  objects : Array[MarshalValue] // Shared object table - mutated via methods
+  object_table : Map[MarshalValue, Int] // Shared object table - mutated via methods
+  object_array : Array[MarshalValue] // Shared object array - mutated via methods
   mut position : Int // Current parsing position
   data : Bytes
 }
 
-pub fn Decoder::new(data: Bytes) -> Self {
-  Decoder::{
-    objects: Array::new(),
-    position: 0,
-    data: data,
-  }
+///|
+pub fn Decoder::new(data : Bytes) -> Self {
+  Decoder::{ object_table: {}, object_array: [], position: 0, data }
 }
 
 ///|
 fn Decoder::view(self : Self) -> @bytes.View {
-  self.data[:]
+  self.data[self.position:]
 }
 
 ///|
@@ -71,10 +69,11 @@ fn Decoder::update_view(self : Self, view : BytesView) -> Unit {
 /// ```
 
 ///|
-fn Decoder::add_shared_object(state : Decoder, value : MarshalValue) -> Int {
-  let index = state.objects.length()
-  state.objects.push(value) // This mutates the objects array
-  index
+fn Decoder::add_shared_object(state : Decoder, value : MarshalValue) -> Unit {
+  // TODO:upstream add length method for Map
+  let index = state.object_table.size()
+  state.object_table[value] = index // This mutates the objects array
+  state.object_array.push(value)
 }
 
 /// Retrieves a previously decoded object from the shared object table
@@ -95,15 +94,15 @@ fn Decoder::add_shared_object(state : Decoder, value : MarshalValue) -> Int {
 
 ///|
 fn get_shared_object(state : Decoder, index : Int) -> MarshalValue raise {
-  if index >= state.objects.length() {
+  if index >= state.object_array.length() {
     fail(
       "Invalid shared object reference: index " +
       index.to_string() +
       " >= " +
-      state.objects.length().to_string(),
+      state.object_array.length().to_string(),
     )
   }
-  state.objects[index]
+  state.object_array[index]
 }
 
 /// Parses the 20-byte OCaml Marshal format header
@@ -149,7 +148,7 @@ pub fn Decoder::decode_header(data : Self) -> MarshalHeader raise {
       .. rest,
     ] => {
       // TODO(upstream): improve error message when missing `{` and `}`
-      data.update_view(rest);
+      data.update_view(rest)
       MarshalHeader::{
         magic,
         data_len: data_len.reinterpret_as_int(),
@@ -162,22 +161,114 @@ pub fn Decoder::decode_header(data : Self) -> MarshalHeader raise {
   }
 }
 
-pub fn Decoder::decode(self:Self)-> (MarshalHeader,MarshalValue) raise {
+///|
+pub fn Decoder::decode(self : Self) -> (MarshalHeader, MarshalValue) raise {
   let header = self.decode_header()
   let value = self.decode_value()
   (header, value)
 }
 
-pub fn Decoder::decode_value(self:Self)-> MarshalValue raise {
-  
+///|
+pub fn Decoder::decode_value(self : Self) -> MarshalValue raise {
   match self.view() {
-    [Tag_int, ..rest] => {
-      match rest {
-        [u32be(value)] => MInt(value.reinterpret_as_int())
-        _ => fail("Failed to parse marshal header")
-      }  
+    // Small integers (0-63): encoded as 0x40 + value
+    [0x40..=0x7F as b, .. rest] => {
+      self.update_view(rest)
+      let value = b.to_int() - 0x40
+      let marshal_value = MInt(value)
+      marshal_value
     }
-    ...
+
+    // String tag
+    [Tag_string, .. rest] => {
+      self.update_view(rest)
+      self.decode_string()
+    }
+    // Double tag
+    [Tag_double, .. rest] => {
+      self.update_view(rest)
+      self.decode_double()
+    }
+    // Block tag
+    [Tag_block, .. rest] => {
+      self.update_view(rest)
+      self.decode_block()
+    }
+    // Shared object reference
+    [Tag_shared, .. rest] => {
+      self.update_view(rest)
+      self.decode_shared_reference()
+    }
+    [tag, ..] =>
+      fail("Unknown or unsupported marshal tag \{tag} at \{self.position}")
+    [] => fail("unepected end of data")
   }
 }
 
+///|
+fn Decoder::decode_string(self : Self) -> MarshalValue raise {
+  match self.view() {
+    [u32(length), .. rest] => {
+      let len = length.reinterpret_as_int()
+      guard rest.length() >= len else {
+        fail("Insufficient data for string of length ")
+      }
+      let string_bytes = rest[:len]
+      let remaining = rest[len:]
+      self.update_view(remaining)
+      let marshal_value = MString(string_bytes.to_bytes())
+      self.add_shared_object(marshal_value)
+      marshal_value
+    }
+    _ => fail("Failed to parse string length")
+  }
+}
+
+///|
+fn Decoder::decode_double(self : Self) -> MarshalValue raise {
+  match self.view() {
+    [u64(value), .. rest] => {
+      self.update_view(rest)
+      let marshal_value = MFloat(value.reinterpret_as_double())
+      self.add_shared_object(marshal_value)
+      marshal_value
+    }
+    _ => fail("Failed to parse double")
+  }
+}
+
+///|
+fn Decoder::decode_block(self : Self) -> MarshalValue raise {
+  match self.view() {
+    [tag_byte, size_byte, .. rest] => {
+      let tag = tag_byte.to_int()
+      let size = size_byte.to_int()
+      self.update_view(rest)
+
+      // Create placeholder for recursive structures
+      let fields = Array::new()
+      let marshal_value = MBlock(tag~, fields)
+      let obj_index = self.add_shared_object(marshal_value)
+
+      // Decode all fields
+      for i = 0; i < size; i = i + 1 {
+        let field_value = self.decode_value()
+        fields.push(field_value)
+      }
+      marshal_value
+    }
+    _ => fail("Failed to parse block header")
+  }
+}
+
+///|
+fn Decoder::decode_shared_reference(self : Self) -> MarshalValue raise {
+  match self.view() {
+    [u32(index), .. rest] => {
+      self.update_view(rest)
+      let idx = index.reinterpret_as_int()
+      get_shared_object(self, idx)
+    }
+    _ => fail("Failed to parse shared reference index")
+  }
+}

@@ -11,4 +11,4 @@ let print_to_mbt_fmt data =
   !s ^ "]" |>print_endline
 
 
-;; print_to_mbt_fmt(123)  
+;; print_to_mbt_fmt(1)  
