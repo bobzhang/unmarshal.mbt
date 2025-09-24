@@ -127,7 +127,7 @@ const CODE_CUSTOM_FIXED : Byte = 0x19
 // const Tag_block : Byte = 0x10
 
 ///|
-pub(all) struct Decoder {
+struct Decoder {
   object_table : Map[MarshalValue, Int] // Shared object table - mutated via methods
   object_array : Array[MarshalValue] // Shared object array - mutated via methods
   mut position : Int // Current parsing position

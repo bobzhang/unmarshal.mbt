@@ -7,12 +7,7 @@ fn fib(Int) -> Int64
 // Errors
 
 // Types and methods
-pub(all) struct Decoder {
-  object_table : Map[MarshalValue, Int]
-  object_array : Array[MarshalValue]
-  mut position : Int
-  data : Bytes
-}
+type Decoder
 fn Decoder::decode(Self) -> (MarshalHeader, MarshalValue) raise
 fn Decoder::decode_header(Self) -> MarshalHeader raise
 fn Decoder::decode_value(Self) -> MarshalValue raise
