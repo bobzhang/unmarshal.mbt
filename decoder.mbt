@@ -26,17 +26,29 @@ const Tag_shared : Byte = 0x04
 const Tag_block : Byte = 0x10
 
 ///|
-pub(all) struct DecoderState {
+pub(all) struct Decoder {
   objects : Array[MarshalValue] // Shared object table - mutated via methods
   mut position : Int // Current parsing position
   data : Bytes
 }
 
+pub fn Decoder::new(data: Bytes) -> Self {
+  Decoder::{
+    objects: Array::new(),
+    position: 0,
+    data: data,
+  }
+}
+
 ///|
-fn DecoderState::view(self : Self) -> @bytes.View {
+fn Decoder::view(self : Self) -> @bytes.View {
   self.data[:]
 }
 
+///|
+fn Decoder::update_view(self : Self, view : BytesView) -> Unit {
+  self.position = view.start_offset()
+}
 /// Adds a decoded object to the shared object table
 /// 
 /// Every decoded object (except shared references) is automatically registered
@@ -54,12 +66,12 @@ fn DecoderState::view(self : Self) -> @bytes.View {
 /// ``` text
 /// let state = { objects: Array::new(), position: 0 }
 /// let value = MInt(42)
-/// let index = add_shared_object(state, value) // Returns 0
+/// let index = state.add_shared_object(value) // Returns 0
 /// // Later: get_shared_object(state, 0) returns MInt(42)
 /// ```
 
 ///|
-fn add_shared_object(state : DecoderState, value : MarshalValue) -> Int {
+fn Decoder::add_shared_object(state : Decoder, value : MarshalValue) -> Int {
   let index = state.objects.length()
   state.objects.push(value) // This mutates the objects array
   index
@@ -82,7 +94,7 @@ fn add_shared_object(state : DecoderState, value : MarshalValue) -> Int {
 /// Aborts if the index is out of bounds (invalid shared reference)
 
 ///|
-fn get_shared_object(state : DecoderState, index : Int) -> MarshalValue raise {
+fn get_shared_object(state : Decoder, index : Int) -> MarshalValue raise {
   if index >= state.objects.length() {
     fail(
       "Invalid shared object reference: index " +
@@ -126,36 +138,39 @@ fn get_shared_object(state : DecoderState, index : Int) -> MarshalValue raise {
 /// ```
 
 ///|
-pub fn DecoderState::decode_header(data : Self) -> MarshalHeader raise {
+pub fn Decoder::decode_header(data : Self) -> MarshalHeader raise {
   match data.view() {
     [
-      u32be(0x8495A6BE | 0x8495A6BF as magic),
-      u32be(data_len),
-      u32be(num_objects),
-      u32be(size_32),
-      u32be(size_64),
-      ..,
-    ] =>
-      {
+      u32(0x8495A6BE | 0x8495A6BF as magic),
+      u32(data_len),
+      u32(num_objects),
+      u32(size_32),
+      u32(size_64),
+      .. rest,
+    ] => {
+      // TODO(upstream): improve error message when missing `{` and `}`
+      data.update_view(rest);
+      MarshalHeader::{
         magic,
         data_len: data_len.reinterpret_as_int(),
         num_objects: num_objects.reinterpret_as_int(),
         size_32: size_32.reinterpret_as_int(),
         size_64: size_64.reinterpret_as_int(),
       }
+    }
     _ => fail("Failed to parse marshal header")
   }
 }
 
-pub fn DecoderState::decode(self:Self)-> (MarshalHeader,MarshalValue) raise {
+pub fn Decoder::decode(self:Self)-> (MarshalHeader,MarshalValue) raise {
   let header = self.decode_header()
   let value = self.decode_value()
   (header, value)
 }
 
-pub fn DecoderState::decode_value(self:Self)-> MarshalValue raise {
-  let tag = self.view()
-  match tag {
+pub fn Decoder::decode_value(self:Self)-> MarshalValue raise {
+  
+  match self.view() {
     [Tag_int, ..rest] => {
       match rest {
         [u32be(value)] => MInt(value.reinterpret_as_int())

@@ -19,18 +19,6 @@ pub struct MarshalHeader {
   size_64 : Int
 } derive(Show, Eq, ToJson)
 
-///|
-/// Wrapper for byte arrays with JSON serialization support
-/// 
-/// Provides a clean JSON representation of byte data as an array of numbers
-/// for debugging and testing purposes.
-//TODO:(upstream) impl ToJson for Bytes
-pub struct MBytes(Bytes) derive(Eq, Show)
-
-///|
-pub impl ToJson for MBytes with to_json(self) {
-  Json::array(self.0.to_array().map(x => Json::number(x.to_double())))
-}
 
 /// Represents all possible OCaml values that can be unmarshaled
 /// 
@@ -58,6 +46,6 @@ pub enum MarshalValue {
   MString(String)
   MFloat(Double)
   MBlock(tag~ : Int, Array[MarshalValue]) // tag, fields
-  MCustom(String, MBytes) // identifier, data
+  MCustom(String, Bytes) // identifier, data
   MShared(Int) // reference to shared object
-} derive(Show, Eq, ToJson(style="flat"))
+} derive(Show, Eq, ToJson)
