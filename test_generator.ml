@@ -82,3 +82,25 @@ let () =
   print_test_case "float_pi" 3.14159 "Float 3.14159";
   print_test_case "float_neg" (-2.5) "Float -2.5";
   print_test_case "float_zero" 0.0 "Float 0.0";
+  
+  (* Shared data test cases *)
+  let shared_string = "shared" in
+  print_test_case "shared_string_tuple" (shared_string, shared_string) "Tuple with shared string (\"shared\", \"shared\")";
+  
+  let shared_list = [1; 2; 3] in
+  print_test_case "shared_list_tuple" (shared_list, shared_list) "Tuple with shared list ([1;2;3], [1;2;3])";
+  
+  let shared_nested = ("test", 42) in
+  print_test_case "shared_nested_tuple" (shared_nested, shared_nested) "Tuple with shared nested tuple ((\"test\", 42), (\"test\", 42))";
+  
+  (* Triple with shared middle element *)
+  let shared_middle = "middle" in
+  print_test_case "triple_shared_middle" ("first", shared_middle, shared_middle) "Triple with shared middle (\"first\", \"middle\", \"middle\")";
+  
+  (* List containing shared elements *)
+  let shared_elem = "elem" in
+  print_test_case "list_with_shared" [shared_elem; shared_elem; shared_elem] "List with same string repeated [\"elem\"; \"elem\"; \"elem\"]";
+  
+  (* Complex nested structure with sharing *)
+  let shared_inner = [10; 20] in
+  print_test_case "complex_shared" ((1, shared_inner), (2, shared_inner)) "Complex nested with sharing ((1, [10;20]), (2, [10;20]))";

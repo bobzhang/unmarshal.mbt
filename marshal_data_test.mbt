@@ -519,3 +519,63 @@ let float_zero_data : Bytes = [
   b'\x00', b'\x02', b'\x0c', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
   b'\x00', b'\x00',
 ]
+
+// Tuple with shared string ("shared", "shared")
+
+///|
+let shared_string_tuple_data : Bytes = [
+  b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0a', b'\x00',
+  b'\x00', b'\x00', b'\x02', b'\x00', b'\x00', b'\x00', b'\x06', b'\x00', b'\x00',
+  b'\x00', b'\x05', b'\xa0', b'\x26', b'\x73', b'\x68', b'\x61', b'\x72', b'\x65',
+  b'\x64', b'\x04', b'\x01',
+]
+
+// Tuple with shared list ([1;2;3], [1;2;3])
+
+///|
+let shared_list_tuple_data : Bytes = [
+  b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0a', b'\x00',
+  b'\x00', b'\x00', b'\x04', b'\x00', b'\x00', b'\x00', b'\x0c', b'\x00', b'\x00',
+  b'\x00', b'\x0c', b'\xa0', b'\xa0', b'\x41', b'\xa0', b'\x42', b'\xa0', b'\x43',
+  b'\x40', b'\x04', b'\x03',
+]
+
+// Tuple with shared nested tuple (("test", 42), ("test", 42))
+
+///|
+let shared_nested_tuple_data : Bytes = [
+  b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0a', b'\x00',
+  b'\x00', b'\x00', b'\x03', b'\x00', b'\x00', b'\x00', b'\x09', b'\x00', b'\x00',
+  b'\x00', b'\x08', b'\xa0', b'\xa0', b'\x24', b'\x74', b'\x65', b'\x73', b'\x74',
+  b'\x6a', b'\x04', b'\x02',
+]
+
+// Triple with shared middle ("first", "middle", "middle")
+
+///|
+let triple_shared_middle_data : Bytes = [
+  b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x10', b'\x00',
+  b'\x00', b'\x00', b'\x03', b'\x00', b'\x00', b'\x00', b'\x0a', b'\x00', b'\x00',
+  b'\x00', b'\x08', b'\xb0', b'\x25', b'\x66', b'\x69', b'\x72', b'\x73', b'\x74',
+  b'\x26', b'\x6d', b'\x69', b'\x64', b'\x64', b'\x6c', b'\x65', b'\x04', b'\x01',
+]
+
+// List with same string repeated ["elem"; "elem"; "elem"]
+
+///|
+let list_with_shared_data : Bytes = [
+  b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0d', b'\x00',
+  b'\x00', b'\x00', b'\x04', b'\x00', b'\x00', b'\x00', b'\x0c', b'\x00', b'\x00',
+  b'\x00', b'\x0b', b'\xa0', b'\x24', b'\x65', b'\x6c', b'\x65', b'\x6d', b'\xa0',
+  b'\x04', b'\x02', b'\xa0', b'\x04', b'\x03', b'\x40',
+]
+
+// Complex nested with sharing ((1, [10;20]), (2, [10;20]))
+
+///|
+let complex_shared_data : Bytes = [
+  b'\x84', b'\x95', b'\xa6', b'\xbe', b'\x00', b'\x00', b'\x00', b'\x0c', b'\x00',
+  b'\x00', b'\x00', b'\x05', b'\x00', b'\x00', b'\x00', b'\x0f', b'\x00', b'\x00',
+  b'\x00', b'\x0f', b'\xa0', b'\xa0', b'\x41', b'\xa0', b'\x4a', b'\xa0', b'\x54',
+  b'\x40', b'\xa0', b'\x42', b'\x04', b'\x03',
+]
