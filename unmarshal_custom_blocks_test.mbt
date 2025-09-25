@@ -72,7 +72,7 @@ test "unmarshal custom block Int32 negative" {
      0xff, 0xff, 0xff, 0xd6, // Int32 value: -42
   ])
   let decoder = Decoder::new(data)
-  let (header, value) = decoder.decode()
+  let (_header, value) = decoder.decode()
   match value {
     MCustom(id, data) => {
       assert_eq(id, "_i")
@@ -96,7 +96,7 @@ test "unmarshal custom block Int64" {
      0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x42, 0x40, // Int64 value: 1000000
   ])
   let decoder = Decoder::new(data)
-  let (header, value) = decoder.decode()
+  let (_header, value) = decoder.decode()
   match value {
     MCustom(id, data) => {
       assert_eq(id, "_j")
@@ -125,7 +125,7 @@ test "unmarshal custom block with length prefix" {
      0x12, 0x34, 0x56, 0x78, // Int32 value: 0x12345678
   ])
   let decoder = Decoder::new(data)
-  let (header, value) = decoder.decode()
+  let (_header, value) = decoder.decode()
   match value {
     MCustom(id, data) => {
       assert_eq(id, "_i")
@@ -158,7 +158,7 @@ test "unmarshal tuple with custom blocks" {
      0x48, 0x65, 0x6c, 0x6c, 0x6f, // "Hello"
   ])
   let decoder = Decoder::new(data)
-  let (header, value) = decoder.decode()
+  let (_header, value) = decoder.decode()
   match value {
     MBlock(tag~, fields) => {
       assert_eq(tag, 0)
@@ -197,7 +197,7 @@ test "unmarshal nativeint custom block" {
      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, // Nativeint value: 42
   ])
   let decoder = Decoder::new(data)
-  let (header, value) = decoder.decode()
+  let (_header, value) = decoder.decode()
   match value {
     MCustom(id, data) => {
       assert_eq(id, "_n")
